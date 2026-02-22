@@ -1,7 +1,8 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import styled from 'styled-components';
 import { authApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { debugError, debugLog } from '../utils/debug';
 
 const Wrapper = styled.section`
   width: 100%;
@@ -73,6 +74,12 @@ export function AuthPanel() {
     setLoading(true);
     setError('');
 
+    debugLog('auth', 'Submit auth form', {
+      mode,
+      email: form.email,
+      role: form.role
+    });
+
     try {
       if (mode === 'register') {
         await authApi.register({
@@ -81,12 +88,31 @@ export function AuthPanel() {
           senha: form.senha,
           role: form.role
         });
+
+        debugLog('auth', 'Register succeeded', {
+          email: form.email,
+          role: form.role
+        });
+
         setMode('login');
       } else {
         const response = await authApi.login({ email: form.email, senha: form.senha });
+
+        debugLog('auth', 'Login response received', {
+          email: form.email,
+          user: response?.user
+        });
+
         login(response);
       }
     } catch (err) {
+      debugError('auth', 'Auth flow failed', {
+        mode,
+        email: form.email,
+        message: err.message,
+        status: err.status
+      });
+
       setError(err.message);
     } finally {
       setLoading(false);

@@ -1,4 +1,5 @@
-﻿import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useMemo, useState } from 'react';
+import { debugError, debugLog } from '../utils/debug';
 
 const TOKEN_KEY = 'fivam_token';
 const USER_KEY = 'fivam_user';
@@ -9,10 +10,28 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '');
   const [user, setUser] = useState(() => {
     const raw = localStorage.getItem(USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+
+    if (!raw) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      debugLog('auth', 'Recovered user from localStorage', { user: parsed });
+      return parsed;
+    } catch (error) {
+      debugError('auth', 'Failed to parse persisted user', { message: error.message });
+      localStorage.removeItem(USER_KEY);
+      return null;
+    }
   });
 
   const login = ({ token: nextToken, user: nextUser }) => {
+    debugLog('auth', 'Persisting session after login', {
+      hasToken: Boolean(nextToken),
+      user: nextUser
+    });
+
     setToken(nextToken);
     setUser(nextUser);
     localStorage.setItem(TOKEN_KEY, nextToken);
@@ -20,6 +39,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    debugLog('auth', 'Clearing session on logout');
+
     setToken('');
     setUser(null);
     localStorage.removeItem(TOKEN_KEY);
